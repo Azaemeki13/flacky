@@ -28,8 +28,8 @@
 - [x] Connect Rust to the PostgreSQL port provided by Dev 2.
 
 **Developer 2 (UI, DB, DevOps):**
-- [ ] Write `docker-compose.yml` (Postgres DONE, Adminer TODO).
-- [ ] Write `.sql` migration files (`Users` DONE, `Tracks` DONE, `Playlists`).
+- [x] Write `docker-compose.yml` (Postgres , Adminer ).
+- [x] Write `.sql` migration files (`Users` , `Songs` , `Playlists`).
 - [ ] Initialize Frontend framework and setup basic routing. TODO
 
 **Developer 3 (Client Engine):**
