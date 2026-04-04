@@ -49,3 +49,12 @@ pub struct PlaylistPayload
     pub name: String,
     pub owner_id: uuid::Uuid,
 }
+
+#[derive(serde::Serialize)]
+pub struct PlaylistResponse
+{
+    pub id: uuid::Uuid,
+    pub name: String,
+    pub owner_id: uuid::Uuid,
+    pub songs: serde_json::Value,
+}
