@@ -7,7 +7,9 @@ use crate::models::User;
 use crate::models::UserPayload;
 use crate::models::Song;
 use crate::models::SongPayload;
-use crate::handlers::{ping_handler, create_user_handler, get_all_users_handler, get_all_users_by_id_handler, create_song_handler};
+use crate::models::Playlist;
+use crate::models::PlaylistPayload;
+use crate::handlers::{ping_handler, create_user_handler, get_all_users_handler, get_all_users_by_id_handler, create_song_handler, create_playlist_handler, add_song_to_playlist_handler};
 
 
 #[tokio::main]
@@ -27,6 +29,8 @@ async fn main()
         .route("/ping", get(ping_handler))
         .route("/users", post(create_user_handler).get(get_all_users_handler))
         .route("/songs", post(create_song_handler))
+        .route("/playlists", post(create_playlist_handler))
+        .route("/playlists/{playlist_id}/songs/{song_id}", post(add_song_to_playlist_handler))
         .route("/users/{id}", get(get_all_users_by_id_handler))
         .with_state(pool);
     let listener_addr = "0.0.0.0:8080";

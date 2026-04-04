@@ -4,6 +4,8 @@ use crate::User;
 use crate::UserPayload;
 use crate::Song;
 use crate::SongPayload;
+use crate::Playlist;
+use crate::PlaylistPayload;
 
 #[axum::debug_handler]
 pub async fn ping_handler() -> &'static str 
@@ -57,7 +59,38 @@ pub async fn create_song_handler(State(pool): State<PgPool>,
         .fetch_one(&pool)
         .await
         .map_err(|e| 
-            {eprintln!("Database error {}", e);
+            {eprintln!("Database song error {}", e);
             axum::http::StatusCode::INTERNAL_SERVER_ERROR})?;
     Ok(Json(song))
+}
+
+pub async fn create_playlist_handler(State(pool): State<PgPool>,
+    axum::extract::Json(payload): axum::extract::Json<PlaylistPayload>, )->Result<Json<Playlist>, axum::http::StatusCode>
+{
+    let playlist = sqlx::query_as!
+        (Playlist, "INSERT INTO playlists (name, owner_id) VALUES ($1, $2) RETURNING id, name, owner_id, created_at", payload.name, payload.owner_id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|e|
+            {eprintln!("Database playlist error {}", e);
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR})?;
+    Ok(Json(playlist))
+}
+
+pub async fn add_song_to_playlist_handler(State(pool): State<PgPool>,
+    axum::extract::Path((playlist_id, song_id)): axum::extract::Path<(uuid::Uuid, uuid::Uuid)>,) -> Result<axum::http::StatusCode, axum::http::StatusCode>
+{
+    sqlx::query!
+        ("INSERT INTO playlist_songs (playlist_id, song_id) VALUES ($1, $2)",
+        playlist_id, song_id)
+        .execute(&pool)
+        .await
+        .map_err
+        (|e| 
+         {
+            eprintln!("Link error ! {}", e);
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR
+         })?;
+    Ok(axum::http::StatusCode::CREATED)
+
 }
