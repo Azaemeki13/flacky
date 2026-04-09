@@ -43,10 +43,10 @@
 
 **Developer 1 (Rust Engine):**
 - [x] Implement JWT Auth logic in Rust.
-- [ ] JWT Bouncer 
+- [x] JWT Bouncer 
 - [x] Implement OAuth 2.0 flow.
-- [ ] Implement AWS S3 Pre-Signed URL generation using `aws-sdk-s3`.
-- [ ] Build `POST /tracks` endpoint using SQLx.
+- [x] Implement AWS S3 Pre-Signed URL generation using `aws-sdk-s3`.
+- [x] Build `POST /tracks` endpoint using SQLx.
 
 **Developer 2 (UI, DB, DevOps):**
 - [ ] Build Auth UI (Login/Register forms).
