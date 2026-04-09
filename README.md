@@ -63,9 +63,11 @@
 
 **Developer 1 (Rust Engine):**
 - [ ] Build Relational POST (artists albums, collabs all interconnected XDXDXDXDXDXD).
+- [ ] CLI Tool to buld load songs from a directory
 - [ ] Build Playlist CRUD operations in Rust.
 - [ ] Metadata Aggregation. Playlist response also includes total_duration and song_count.
 - [ ] Build Advanced Search endpoint (`ILIKE` queries via SQLx).
+- [ ] Look if there is anything else to do related to the AI week 5.
 
 **Developer 2 (UI, DB, DevOps):**
 - [ ] Build User Profile and Settings UI.
