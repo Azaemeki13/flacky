@@ -1,8 +1,14 @@
-use crate::{
-    AppState, AuthRequest, Claims, GoogleUserProfile, Playlist, PlaylistPayload, PlaylistResponse,
-    Song, SongPayload, SongResponse, User, UserPayload,
-};
-use aws_sdk_s3::presigning::PresigningConfig;
+use crate::AppState;
+use crate::AuthRequest;
+use crate::Claims;
+use crate::GoogleUserProfile;
+use crate::Playlist;
+use crate::PlaylistPayload;
+use crate::PlaylistResponse;
+use crate::Song;
+use crate::SongPayload;
+use crate::User;
+use crate::UserPayload;
 use axum::{
     Json,
     extract::Path,
@@ -11,8 +17,8 @@ use axum::{
     response::{IntoResponse, Redirect},
 };
 use oauth2::{AuthorizationCode, CsrfToken, Scope, TokenResponse};
+use aws_sdk_s3::presigning::PresigningConfig;
 use std::time::Duration;
-use uuid::Uuid;
 
 #[axum::debug_handler]
 pub async fn ping_handler() -> &'static str {
@@ -68,7 +74,7 @@ pub async fn create_song_handler(
     State(state): State<AppState>,
     claims: Claims,
     axum::extract::Json(payload): axum::extract::Json<SongPayload>,
-) -> Result<Json<SongResponse>, axum::http::StatusCode> {
+) -> Result<Json<Song>, axum::http::StatusCode> {
     if !matches!(payload.format.as_str(), "wav" | "flac") {
         return Err(axum::http::StatusCode::BAD_REQUEST);
     }
@@ -84,85 +90,16 @@ pub async fn create_song_handler(
         .content_type(format!("audio/{}", payload.format))
         .presigned(expires_in)
         .await
-        .map_err(|e| {
-            eprintln!("S3 Presign Error: {:#?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let upload_url = presigned_request.uri().to_string();
     let song = sqlx::query_as!
-        (Song, "INSERT INTO songs (id, title, artist, duration_seconds, audio_url,status, ml_features) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, title, artist, duration_seconds, audio_url, status, ml_features, created_at", song_uid, payload.title, payload.artist, payload.duration_seconds, s3_key,
+        (Song, "INSERT INTO songs (title, artist, duration_seconds, audio_url,status, ml_features) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, title, artist, duration_seconds, audio_url, ml_features, created_at", song_uid, payload.artist, payload.duration_seconds, s3_key,
         "Pending", payload.ml_features)
         .fetch_one(&state.db)
         .await
         .map_err(|e|{eprintln!("Database song error {}", e);
             axum::http::StatusCode::INTERNAL_SERVER_ERROR})?;
-    let response = SongResponse {
-        song: song,
-        upload_url: upload_url,
-    };
-    Ok(Json(response))
-}
-
-pub async fn verify_song_handler(
-    State(state): State<AppState>,
-    _claims: Claims,
-    axum::extract::Path(song_id): axum::extract::Path<Uuid>,
-) -> Result<axum::Json<serde_json::Value>, axum::http::StatusCode> {
-    let s3_key = sqlx::query_scalar!("SELECT audio_url FROM songs WHERE id = $1", song_id)
-        .fetch_one(&state.db)
-        .await
-        .map_err(|e| {
-            eprintln!("Error while finding song format {:#?}", e);
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR
-        })?;
-    let get_request = state
-        .aws_client
-        .get_object()
-        .bucket("bside-tracks")
-        .key(&s3_key)
-        .range("bytes=0-31")
-        .send()
-        .await
-        .map_err(|_| StatusCode::NOT_FOUND)?;
-    let content_length = get_request.content_length().unwrap_or(0);
-    let max_size = 200 * 1024 * 1024;
-    if content_length > max_size {
-        let _ = state
-            .aws_client
-            .delete_object()
-            .bucket("bside-tracks")
-            .key(&s3_key)
-            .send()
-            .await;
-        let _ = sqlx::query!("DELETE FROM songs WHERE id = $1", song_id)
-            .execute(&state.db)
-            .await;
-        return Err(StatusCode::PAYLOAD_TOO_LARGE);
-    }
-    let body = get_request
-        .body
-        .collect()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let bytes = body.into_bytes();
-    if bytes.len() < 4 || (&bytes[..4] != b"fLaC" && &bytes[..4] != b"RIFF") {
-        let _ = state
-            .aws_client
-            .delete_object()
-            .bucket("bside-tracks")
-            .key(&s3_key)
-            .send()
-            .await;
-        let _ = sqlx::query!("DELETE FROM songs WHERE id = $1", song_id)
-            .execute(&state.db)
-            .await;
-        return Err(StatusCode::UNSUPPORTED_MEDIA_TYPE);
-    }
-    let _response = sqlx::query!("UPDATE songs SET status = 'Ready' WHERE id = $1", song_id)
-        .execute(&state.db)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    Ok(axum::Json(serde_json::json!({"status": "verified"})))
+    Ok(Json(song))
 }
 
 pub async fn create_playlist_handler(
@@ -292,5 +229,5 @@ pub async fn google_callback_handler(
         }
     };
     let jwt = crate::auth::create_jwt(user_id)?;
-    Ok(format!("Welcome to Bside !  Your official JWT is {}", jwt))
+    Ok(format!("Welcome to Flacky !  Your official JWT is {}", jwt))
 }

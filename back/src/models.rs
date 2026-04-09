@@ -1,4 +1,6 @@
 use oauth2::{EndpointNotSet, EndpointSet, basic::BasicClient};
+use secrecy::SecretString;
+use std::sync::Arc;
 
 #[derive(serde::Serialize, sqlx::FromRow)]
 pub struct User {
@@ -19,6 +21,7 @@ pub struct Song {
     pub artist: String,
     pub duration_seconds: i32,
     pub audio_url: String,
+    pub status: String,
     pub ml_features: Option<serde_json::Value>,
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
@@ -28,8 +31,14 @@ pub struct SongPayload {
     pub title: String,
     pub artist: String,
     pub duration_seconds: i32,
-    pub audio_url: String,
+    pub format: String,
     pub ml_features: Option<serde_json::Value>,
+}
+
+#[derive(serde::Serialize)]
+pub struct SongResponse {
+    pub song: Song,
+    pub upload_url: String,
 }
 
 #[derive(serde::Serialize, sqlx::FromRow)]
@@ -67,6 +76,8 @@ pub struct AppState {
     pub db: sqlx::PgPool,
     pub oauth_client: AppClient,
     pub http_client: reqwest::Client,
+    pub jwt: Arc<SecretString>,
+    pub aws_client: aws_sdk_s3::Client,
 }
 
 #[derive(serde::Deserialize)]

@@ -1,7 +1,10 @@
+use crate::AppState;
 use axum::{
-    extract::FromRequestParts,
+    extract::{FromRef, FromRequestParts},
     http::{StatusCode, request::Parts},
 };
+use secrecy::ExposeSecret;
+
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 
@@ -33,20 +36,21 @@ pub fn create_jwt(user_id: uuid::Uuid) -> Result<String, StatusCode> {
 
 impl<S> FromRequestParts<S> for Claims
 where
+    AppState: FromRef<S>,
     S: Send + Sync,
 {
     type Rejection = StatusCode;
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let app_state = AppState::from_ref(state);
         let auth_header = parts
             .headers
             .get("Authorization")
             .and_then(|h| h.to_str().ok())
             .and_then(|h| h.strip_prefix("Bearer "));
         let token = auth_header.ok_or(StatusCode::UNAUTHORIZED)?;
-        let secret = std::env::var("JWT_SECRET").expect("JWT secret must be set");
         let token_data = decode::<Claims>(
             token,
-            &DecodingKey::from_secret(secret.as_bytes()),
+            &DecodingKey::from_secret(app_state.jwt.expose_secret().as_bytes()),
             &Validation::default(),
         )
         .map_err(|_| StatusCode::UNAUTHORIZED)?;

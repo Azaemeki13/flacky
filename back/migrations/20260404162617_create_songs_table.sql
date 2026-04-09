@@ -4,6 +4,7 @@ CREATE TABLE songs (
 	artist VARCHAR(255) NOT NULL,
 	duration_seconds INTEGER NOT NULL,
 	audio_url VARCHAR(255) NOT NULL,
+	status VARCHAR(50) NOT NULL DEFAULT 'pending',
 	ml_features JSONB,
 	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
